@@ -2,7 +2,7 @@
 
 var debug = require('debug')('db');
 var pg = require('pg');
-var conn = process.env.HEROKU_POSTGRESQL_BLUE_URL || 'tcp://postgres:root@localhost/auth-server';
+var conn = process.env.HEROKU_POSTGRESQL_BLUE_URL || process.env.DATABASE_URL;
 
 // Export the function DB
 module.exports = DB;

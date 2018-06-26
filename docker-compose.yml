@@ -1,0 +1,25 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgres://postgres:password@db:5432/auth-server
+      - PORT=3000   
+    depends_on:
+      - db
+    volumes:
+      - ./:/opt/webapp
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres:/var/lib/postgresql/data
+      - ./docker:/docker-entrypoint-initdb.d/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=auth-server

@@ -1,4 +1,6 @@
 node_modules/
 .env*
-data
+docker/
+.DS_Store
+newrelic_agent.log
 

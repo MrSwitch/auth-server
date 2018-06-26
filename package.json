@@ -8,13 +8,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon --exec 'node -r dotenv/config' server.js",
+    "dev": "DEBUG=* nodemon --exec 'node -r dotenv/config' server.js",
     "pngify": "svg2png ./avatar.svg -w 48",
     "heroku_db": "heroku pg:psql HEROKU_POSTGRESQL_BLUE_URL",
     "local_db": "PGUSER=postgres PGPASSWORD=root psql auth-server",
     "local_drop_db": "PGUSER=postgres PGPASSWORD=root dropdb auth-server",
     "heroku_export_db": "PGUSER=postgres PGPASSWORD=root heroku pg:pull HEROKU_POSTGRESQL_BLUE_URL auth-server --app auth-server",
-    "export_db_manual": "pg_dump --verbose -C -O -f db.dump -F c -Z 0 `heroku config:get HEROKU_POSTGRESQL_BLUE_URL`",
+    "export_db_manual": "pg_dump --verbose -C -O --data-only --no-owner --no-acl --disable-dollar-quoting --no-tablespaces -f docker/db.sql -Z 0 `heroku config:get HEROKU_POSTGRESQL_BLUE_URL`",
     "import_db_manual": "PGUSER=postgres PGPASSWORD=root pg_restore --verbose --clean --no-acl --no-owner -h localhost -U postgres -d auth-server db.dump"
   },
   "dependencies": {

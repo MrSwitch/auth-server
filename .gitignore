@@ -1,6 +1,7 @@
 node_modules/
 .env*
 docker/data
+docker/scripts/*.dump
 .DS_Store
 newrelic_agent.log
 

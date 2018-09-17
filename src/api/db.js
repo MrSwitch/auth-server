@@ -13,11 +13,17 @@ pg.on('error', err => {
 });
 
 // Client
-let client = connect();
+let _connection;
 
 // Start a new connection to the database
-function connect() {
+function client() {
+
 	return new Promise((resolve, reject) => {
+
+		if (_connection) {
+			resolve(_connection);
+			return;
+		}
 
 		// Set the client
 		let agent = new pg.Client(conn);
@@ -40,7 +46,7 @@ function connect() {
 		agent.on('error', err => {
 			console.log('Connection errored');
 			console.log(err);
-			client = connect();
+			_connection = null;
 		});
 	});
 }
@@ -58,7 +64,7 @@ DB.use = function(table) {
 // Run the query
 DB.query = function(sql, values) {
 
-	return client.then(agent => {
+	return client().then(agent => {
 		// Run the query
 		return new Promise((resolve, reject) => {
 			agent.query(sql, values, (err, resp) => {

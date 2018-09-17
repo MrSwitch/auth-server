@@ -24,6 +24,9 @@ docker_ssh d4a3a339ffdf
 cd docker-entrypoint-initdb.d
 
 pg_restore --verbose --clean --no-acl --no-owner -h localhost -U postgres -d auth-server latest.dump
+
+# Set the trust rule
+echo "host all all all trust" >> /var/lib/postgresql/data/pg_hba.conf
 ```
 
 ## Validate the new database `auth-server`

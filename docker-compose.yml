@@ -15,12 +15,13 @@ services:
       - ./:/usr/src/app
   db:
     image: postgres:latest
+    restart: always
     ports:
       - "5432:5432"
     volumes:
-      - ./docker/data/postgres:/var/lib/postgresql/data
-      - ./docker/data:/docker-entrypoint-initdb.d/
+      - ./docker/data:/var/lib/postgresql/data
+      - ./docker/scripts:/docker-entrypoint-initdb.d/
     environment:
+      - POSTGRES_DB=auth-server
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=auth-server

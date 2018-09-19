@@ -1,9 +1,9 @@
 'use strict';
-var debug = require('debug')('app');
+const debug = require('debug')('app');
 
 const PORT = process.env.PORT || 5500;
 
-var app = require('express')();
+const app = require('express')();
 
 // Connect to the https server
 app.listen(PORT);
@@ -21,7 +21,7 @@ app.use((req, res, next) => {
 });
 
 // Static files
-app.use(require('serve-static')(__dirname + '/../static'));
+app.use(require('serve-static')(`${__dirname }/../static`));
 
 // Status
 // Print out a status message

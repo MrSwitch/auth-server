@@ -1,64 +1,70 @@
 'use strict';
-var debug = require('debug')('redirect');
+const debug = require('debug')('redirect');
 
 // login
 // Expose the login page for session management
 
-var promisify = require('promisify-node');
-var db = require('../api/db');
-var oauthshim = require('oauth-shim');
+const promisify = require('promisify-node');
+const db = require('../api/db');
+const oauthshim = require('oauth-shim');
 
 // Export this module as middleware
-var app = module.exports = require('express')();
+const app = module.exports = require('express')();
 
 // Jade
 app.set('view engine', 'jade');
-app.set('views', __dirname + '/views');
+app.set('views', `${__dirname }/views`);
 
 // Get the Services which we're going to identify with
-var AuthServices = {
-	facebook: [2, require('passport-facebook').Strategy, {profileFields: 'id,displayName,email'.split(',')}, data => {if (data.id) {data.picture = 'https://graph.facebook.com/' + data.id + '/picture';}}],
-	github: [2, require('passport-github').Strategy, {}, data => {data.picture = data._json.avatar_url;}],
+const AuthServices = {
+	facebook: [2, require('passport-facebook').Strategy, {profileFields: 'id,displayName,email'.split(',')}, data => {
+		if (data.id) {
+			data.picture = `https://graph.facebook.com/${ data.id }/picture`;
+		}
+	}],
+	github: [2, require('passport-github').Strategy, {}, data => {
+		data.picture = data._json.avatar_url;
+	}],
 	google: [2, require('passport-google-oauth').OAuth2Strategy],
 	// linkedin: [1, require('passport-linkedin').Strategy, {}],
 	twitter: [1, require('passport-twitter').Strategy],
 	windows: [2, require('passport-windowslive').Strategy],
 	yahoo: [1, require('passport-yahoo-oauth').Strategy]
-}
+};
 
 // INSTALL
 // Create a new file called 'credentials.json', with a key value object literal {client_id => client_secret, ...}
 
 // OAuth-Shim
 // Configure OAuth-Shim with the credentials to use.
-var creds = require('./credentials.js').credentials;
+const creds = require('./credentials.js').credentials;
 const REDIRECT_URI = require('./credentials.js').redirect_uri;
 
 // Passport Profile
 // Configure PassportJS's Google service
-var strategies = {};
+const strategies = {};
 creds.forEach(cred => {
 
-	var network = cred.name;
+	const network = cred.name;
 	strategies[network] = cred;
 
-	var service = AuthServices[network];
+	const service = AuthServices[network];
 
 	if (!service) {
-		throw 'Could not find Auth Service for ' + network;
+		throw `Could not find Auth Service for ${ network}`;
 	}
 
-	var service_oauth_version = service[0];
-	var constructor = service[1];
-	var opts = service[2] || {};
+	const service_oauth_version = service[0];
+	const constructor = service[1];
+	const opts = service[2] || {};
 
 	if (service_oauth_version === 2) {
 		cred.passport = new constructor(merge({
 			clientID: cred.client_id,
 			clientSecret: cred.client_secret,
 			callbackURL: 'https://blank'
-		}, opts), () => {
-			debug(arguments);
+		}, opts), (...args) => {
+			debug(...args);
 		});
 
 		// Add OAuth to strategy
@@ -73,8 +79,8 @@ creds.forEach(cred => {
 			consumerKey: cred.client_id,
 			consumerSecret: cred.client_secret,
 			callbackURL: 'https://blank'
-		}, opts), () => {
-			debug(arguments);
+		}, opts), (...args) => {
+			debug(...args);
 		});
 	}
 
@@ -88,10 +94,10 @@ app.all('*',
 
 		// Add additional information to the state parameter
 		if (req.query.state) {
-			let network = req.query.state;
+			const network = req.query.state;
 			if (network in strategies) {
 				// Define current strategy
-				let strategy = strategies[network];
+				const strategy = strategies[network];
 
 				// Update the query with the oauth parameters for OAuthShim
 				req.query.oauth = strategy.oauth;
@@ -120,7 +126,7 @@ app.all('*',
 		if (req.oauthshim && req.oauthshim.redirect && req.oauthshim.data.access_token) {
 			// Put the original request back together...
 			// This is a relative path since this feature is relative.
-			res.redirect('.' + req.session.authRequest);
+			res.redirect(`.${ req.session.authRequest}`);
 		}
 		else {
 			next();
@@ -140,7 +146,7 @@ app.all('*',
 		// To Store the credentials in the client
 		// To Trigger any callbacks attached to the login
 		res.redirect('./login?error=undefined');
-//		res.end();
+		//		res.end();
 	}
 );
 
@@ -156,8 +162,8 @@ function handleGrantedAuthorization(req, res, next) {
 	}
 
 	// Reference
-	var data = req.oauthshim.data;
-	var opts = req.oauthshim.options;
+	const data = req.oauthshim.data;
+	const opts = req.oauthshim.options;
 
 	// Next: if this is not an OAuth Login response...
 	if (!('access_token' in data && !('path' in opts))) {
@@ -166,16 +172,16 @@ function handleGrantedAuthorization(req, res, next) {
 	}
 
 	// What is the network name
-	var network = data.state;
+	const network = data.state;
 
 	// Debug session created!
-	debug('Session created', network, data.access_token.substr(0, 8) + '...');
+	debug('Session created', network, `${data.access_token.substr(0, 8) }...`);
 
 	// Promisify the passport strategies
-	var chain = promisify(strategies[network].passport.userProfile).bind(strategies[network].passport)
+	let chain = promisify(strategies[network].passport.userProfile).bind(strategies[network].passport);
 
 	// Is this an OAuth1 requesst
-	var a = data.access_token.split(/[\:\@]/);
+	const a = data.access_token.split(/[:@]/);
 
 	// Make request for a User Profile
 	if (a.length > 1) {
@@ -206,43 +212,42 @@ function handleGrantedAuthorization(req, res, next) {
 		return data;
 	})
 	// Handle the profile data
-	.then(profileData => {
+		.then(profileData => {
 
 		// Match the user with the profile data
-		return setProfileToSession(network, req.session.user_id, profileData)
-		.then((user_id) => {
-			debug('Session set user_id', user_id);
-			// Save this users data to the session
-			req.session.connections[network] = profileData;
-			req.session.user_id = user_id;
+			return setProfileToSession(network, req.session.user_id, profileData)
+				.then(user_id => {
+					debug('Session set user_id', user_id);
+					// Save this users data to the session
+					req.session.connections[network] = profileData;
+					req.session.user_id = user_id;
 
-		});
-	})
+				});
+		})
 	//
-	.then(() => {
+		.then(() => {
 		// Continue back to the authorization page
-		next();
-	},
-	err => {
+			next();
+		},
+		err => {
 
 		// Log error
-		debug(err);
+			debug(err);
 
-		// Initiate the properties which are passed to the rendered document
-		let options = {
-			session: req.session
-		};
+			// Initiate the properties which are passed to the rendered document
+			const options = {
+				session: req.session
+			};
 
-		// Duplicate?
-		if (err.message && err.message.match('duplicate')) {
+			// Duplicate?
+			if (err.message && err.message.match('duplicate')) {
 			// Error: the connection being linked is assigned to another account
-			options.message = 'Snap, this connection is linked to another account. \
-								It will have to be unlinked from the other account before it can be associated with this account';
-		}
+				options.message = 'Snap, this connection is linked to another account. It will have to be unlinked from the other account before it can be associated with this account';
+			}
 
-		// Display error page
-		res.render('error', options);
-	});
+			// Display error page
+			res.render('error', options);
+		});
 }
 
 function setProfileToSession(network, userId, profileData) {
@@ -259,25 +264,25 @@ function setProfileToSession(network, userId, profileData) {
 	// The user has not be defined.
 	// Retrieve the the user whom has this connection
 	return getUserByConnectionId(network, profileData.id)
-	.then(userData => {
+		.then(userData => {
 
 		// Get userID
-		let userId = userData ? userData.id : undefined;
+			const userId = userData ? userData.id : undefined;
 
-		// If the user was not found...
-		if (!userId) {
+			// If the user was not found...
+			if (!userId) {
 			// Create a new user from session data
-			return createUserFromConnection(network, profileData);
-		}
+				return createUserFromConnection(network, profileData);
+			}
 
-		else {
-			return updateUserConnection(network, userData, profileData);
-		}
+			else {
+				return updateUserConnection(network, userData, profileData);
+			}
 
-	}).then(userId => {
-		debug('Acquired User', userId);
-		return userId;
-	});
+		}).then(userId => {
+			debug('Acquired User', userId);
+			return userId;
+		});
 }
 
 
@@ -288,37 +293,37 @@ function getUserById(userId) {
 
 function getUserByConnectionId(network, conn_id) {
 
-	return db.query('SELECT * FROM users WHERE ' + network + '_id LIKE \'%' + conn_id + '%\' LIMIT 1')
-	.then(data => data.rows.length ? data.rows[0] : undefined);
+	return db.query(`SELECT * FROM users WHERE ${ network }_id LIKE '%${ conn_id }%' LIMIT 1`)
+		.then(data => (data.rows.length ? data.rows[0] : undefined));
 }
 
 function createUserFromConnection(network, profileData) {
 
 	debug('Create user');
 
-	let post = {
+	const post = {
 		name: profileData.displayName,
 		picture: profileData.picture
 	};
-	post[network + '_id'] = profileData.id;
-	post[network + '_profile'] = JSON.stringify(profileData);
+	post[`${network }_id`] = profileData.id;
+	post[`${network }_profile`] = JSON.stringify(profileData);
 
 	return db('users')
-	.insert(post)
-	.then(data => {
+		.insert(post)
+		.then(data => {
 		// Found the user, associate this session with them
-		return data.id;
-	});
+			return data.id;
+		});
 }
 
 function updateUserConnection(network, userData, profileData) {
 
-	let cond = {id: userData.id};
+	const cond = {id: userData.id};
 
-	let post = {};
+	const post = {};
 
-	post[network + '_id'] = profileData.id;
-	post[network + '_profile'] = JSON.stringify(profileData);
+	post[`${network }_id`] = profileData.id;
+	post[`${network }_profile`] = JSON.stringify(profileData);
 
 	if (!userData.name && profileData.displayName) {
 		post.name = profileData.displayName;
@@ -336,16 +341,16 @@ function updateUserConnection(network, userData, profileData) {
 	debug('Updating user connection');
 
 	return db('users')
-	.update(post, cond)
-	.then(() => {
+		.update(post, cond)
+		.then(() => {
 		// Found the user, associate this session with them
-		return userData.id;
-	});
+			return userData.id;
+		});
 }
 
 
 function merge(a, b) {
-	for (var x in b) {
+	for (const x in b) {
 		a[x] = b[x];
 	}
 	return a;

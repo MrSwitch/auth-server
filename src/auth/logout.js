@@ -1,7 +1,7 @@
 // logout
 
 'use strict';
-var debug = require('debug')('auth/logout');
+const debug = require('debug')('auth/logout');
 
 // Export this module as middleware
 module.exports = (req, res) => {

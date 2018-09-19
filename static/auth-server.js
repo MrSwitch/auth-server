@@ -2,32 +2,32 @@
 (function(hello) {
 
 	// Setup a link with the current
-	var base = '//' + window.location.host + '/';
+	const base = `//${ window.location.host }/`;
 
 	hello.init({
 		authserver: {
 			name: 'Auth Server',
 			oauth: {
 				version: 2,
-				auth: base + 'auth/login',
-				grant: base + 'auth/token'
+				auth: `${base }auth/login`,
+				grant: `${base }auth/token`
 			},
-			login: function(p) {
+			login(p) {
 				// Reauthenticate
 				if (p.options.force) {
 					p.qs.force = 'true';
 				}
 			},
-			logout: function() {
+			logout() {
 				// return a path to follow
-				return base + 'auth/logout';
+				return `${base }auth/logout`;
 			},
 			refresh: true,
-			base: base + 'api/',
+			base: `${base }api/`,
 			get: {
 				me: 'me'
 			},
-			xhr: function(p) {
+			xhr(p) {
 				if (p.method !== 'get' && p.data) {
 					// Serialize payload as JSON
 					p.headers = p.headers || {};

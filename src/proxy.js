@@ -1,11 +1,11 @@
 'use strict';
-var debug = require('debug')('proxy');
+const debug = require('debug')('proxy');
 
-var oauthshim = require('oauth-shim');
-var db = require('./api/db');
+const oauthshim = require('oauth-shim');
+const db = require('./api/db');
 
 // Export this module as middleware
-var app = module.exports = require('express')();
+const app = module.exports = require('express')();
 
 // Apply the node-oauth-shim
 // app.use('/proxy', oauthshim);
@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 
 	if (req.oauthshim && req.oauthshim.data && req.oauthshim.redirect) {
 
-		var data = req.oauthshim.data;
+		const data = req.oauthshim.data;
 
 		if ('error' in data) {
 
@@ -31,14 +31,14 @@ app.use((req, res, next) => {
 			switch (data.error) {
 				case 'consumer_key_unknown':
 					data.error_message = 'Please check your application id and settings locally and at https//auth-server.herokuapp.com';
-				break;
+					break;
 				case 'signature_invalid':
 					data.error_message = 'Your application needs to be registered at https//auth-server.herokuapp.com';
-				break;
+					break;
 				case 'invalid_credentials':
 				case 'required_credentials':
 					data.error_message += '. Register your app credentials by visiting https//auth-server.herokuapp.com';
-				break;
+					break;
 			}
 		}
 	}
@@ -52,38 +52,38 @@ app.use((req, res, next) => {
 
 	if (req.oauthshim && req.oauthshim.data && req.oauthshim.redirect) {
 
-		var data = req.oauthshim.data;
-		var opts = req.oauthshim.options;
+		const data = req.oauthshim.data;
+		const opts = req.oauthshim.options;
 
 		// Was this an OAuth Login response and does it contain a new access_token?
 		if ('access_token' in data && !('path' in opts)) {
 
 			// Store this access_token
-			debug('Session created', data.access_token.substr(0, 8) + '...');
+			debug('Session created', `${data.access_token.substr(0, 8) }...`);
 
 			// Save the grant URL
 			if (opts && opts.oauth) {
 
 				// Modify the record in the database.
-				var id = opts.client_id;
+				const id = opts.client_id;
 
 				db('apps')
-				.get(['grant_url'], {client_id: id})
-				.then(row => {
-					if (!row.grant_url) {
+					.get(['grant_url'], {client_id: id})
+					.then(row => {
+						if (!row.grant_url) {
 						// Update DB
-						db('apps')
-						.update({grant_url: (opts.oauth.grant || opts.oauth.token)}, {client_id: id})
-						.then(res => {
-							debug(res);
-						}, err => {
-							debug(err);
-						});
-					}
-				})
-				.then(null, err => {
-					debug(err);
-				});
+							db('apps')
+								.update({grant_url: (opts.oauth.grant || opts.oauth.token)}, {client_id: id})
+								.then(res => {
+									debug(res);
+								}, err => {
+									debug(err);
+								});
+						}
+					})
+					.then(null, err => {
+						debug(err);
+					});
 			}
 		}
 	}
@@ -97,7 +97,6 @@ app.use(oauthshim.unhandled);
 
 // If use native clientServer use listen
 // e.g. oauthshim.listen(app,'/proxy');
-
 
 
 //
@@ -119,21 +118,21 @@ oauthshim.credentials.get = (query, callback) => {
 	// Search the database
 	// Get all the current stored credentials
 	//
-	var cond = {client_id: query.client_id};
+	const cond = {client_id: query.client_id};
 
 	db('apps')
-	.get(['domain', 'client_id', 'client_secret', 'grant_url', 'count_accessed'], cond)
-	.then(row => {
+		.get(['domain', 'client_id', 'client_secret', 'grant_url', 'count_accessed'], cond)
+		.then(row => {
 		// Callback
 		// "/#network="+encodeURIComponent(network)+"&client_id="+encodeURIComponent(id)
-		callback(row || null);
+			callback(row || null);
 
-		// Update the db last accessed
-		db('apps').update({
-			last_accessed: 'CURRENT_TIMESTAMP',
-			count_accessed: (row.count_accessed + 1)
-		}, cond)
-	}, () => {
-		callback(null);
-	});
+			// Update the db last accessed
+			db('apps').update({
+				last_accessed: 'CURRENT_TIMESTAMP',
+				count_accessed: (row.count_accessed + 1)
+			}, cond);
+		}, () => {
+			callback(null);
+		});
 };

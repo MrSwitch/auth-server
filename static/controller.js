@@ -1,9 +1,9 @@
 /* global hello, angular */
-var app = angular.module('app', ['ngNotify']);
+const app = angular.module('app', ['ngNotify']);
 
 app.controller('controller', ['$scope', '$filter', '$http', 'ngNotify', function($scope, $filter, $http, ngNotify) {
 
-	var authServer = hello('authserver');
+	const authServer = hello('authserver');
 
 	// Fields
 	$scope.fields = [
@@ -30,7 +30,7 @@ app.controller('controller', ['$scope', '$filter', '$http', 'ngNotify', function
 	$scope.saveApps = function() {
 
 		// Loop through all the apps
-		$scope.apps.forEach(function(app) {
+		$scope.apps.forEach(app => {
 			$scope.postApp(app);
 		});
 
@@ -41,29 +41,29 @@ app.controller('controller', ['$scope', '$filter', '$http', 'ngNotify', function
 
 		// Post JSON formatted content
 		authServer.api('me/apps', 'post', JSON.parse(angular.toJson(app)))
-		.then(function(resp) {
+			.then(resp => {
 
-			ngNotify.set('Successfully updated records', 'success');
+				ngNotify.set('Successfully updated records', 'success');
 
-			// INSERT returns a GUID
-			if (resp.id) {
-				app.id = resp.id;
-			}
+				// INSERT returns a GUID
+				if (resp.id) {
+					app.id = resp.id;
+				}
 
-			// Apply
-			$scope.$apply();
+				// Apply
+				$scope.$apply();
 
-		}, function(err) {
+			}, err => {
 
-			if (err.error && err.error.message && err.error.message.indexOf('unique constraint \"app_pkey\"') > -1) {
-				err.error.message = 'The client_id has already been set';
-			}
+				if (err.error && err.error.message && err.error.message.indexOf('unique constraint "app_pkey"') > -1) {
+					err.error.message = 'The client_id has already been set';
+				}
 
-			ngNotify.set(err.error.message, 'error');
+				ngNotify.set(err.error.message, 'error');
 
-			// Apply
-			$scope.$apply();
-		});
+				// Apply
+				$scope.$apply();
+			});
 	};
 
 	//
@@ -71,16 +71,16 @@ app.controller('controller', ['$scope', '$filter', '$http', 'ngNotify', function
 	$scope.deleteApp = function(app) {
 
 		// Remove from the $scope
-		var index = $scope.apps.indexOf(app);
+		const index = $scope.apps.indexOf(app);
 		$scope.apps.splice(index, 1);
 
 		// Post this request off to the server
 		authServer.api('me/apps', 'delete', {id: app.id})
-		.then(function() {
-			ngNotify.set('Successfully deleted record', 'success');
-		}, function(err) {
-			ngNotify.set(err.error.message, 'error');
-		});
+			.then(() => {
+				ngNotify.set('Successfully deleted record', 'success');
+			}, err => {
+				ngNotify.set(err.error.message, 'error');
+			});
 	};
 
 	// Profiles
@@ -93,47 +93,47 @@ app.controller('controller', ['$scope', '$filter', '$http', 'ngNotify', function
 	};
 	$scope.logout = function() {
 		authServer
-		.logout({force: true})
-		.then(function() {
-			$scope.profile = null;
-			$scope.apps = [];
-			$scope.$apply();
-		});
+			.logout({force: true})
+			.then(() => {
+				$scope.profile = null;
+				$scope.apps = [];
+				$scope.$apply();
+			});
 	};
 
 	// Get the user credentials
-	hello.on('auth.login', function() {
+	hello.on('auth.login', () => {
 
 		// Get the user profile
 		authServer.api('me', {fields: 'id,name,picture'})
-		.then(function(o) {
+			.then(o => {
 
 			// Update the Profile
-			$scope.profile = o;
-			$scope.$apply();
-		});
+				$scope.profile = o;
+				$scope.$apply();
+			});
 
 		// Get the users Apps
 		authServer.api('me/apps')
-		.then(function(resp) {
+			.then(resp => {
 
 			// Loop through the rows and add to the list of the users apps.
-			resp.data.forEach(function(app) {
+				resp.data.forEach(app => {
 
 				// Does it exist
-				var b = $scope.apps.filter(function(_app) {
-					return _app.id === app.id;
-				}).length;
+					const b = $scope.apps.filter(_app => {
+						return _app.id === app.id;
+					}).length;
 
-				// Do we need to insert it?
-				if (!b) {
-					$scope.apps.push(app);
-				}
+					// Do we need to insert it?
+					if (!b) {
+						$scope.apps.push(app);
+					}
+				});
+
+				$scope.$apply();
+
 			});
-
-			$scope.$apply();
-
-		});
 	});
 
 	hello.init({

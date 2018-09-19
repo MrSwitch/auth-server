@@ -1,15 +1,15 @@
 'use strict';
-var debug = require('debug')('auth');
+const debug = require('debug')('auth');
 
 // Export this module as middleware
-var app = module.exports = require('express')();
+const app = module.exports = require('express')();
 
 // Jade
 app.set('view engine', 'jade');
-app.set('views', __dirname + '/views');
+app.set('views', `${__dirname }/views`);
 
 // Static files
-app.use(require('serve-static')(__dirname + '/public'));
+app.use(require('serve-static')(`${__dirname }/public`));
 
 // Session data
 app.use(require('express-session')({

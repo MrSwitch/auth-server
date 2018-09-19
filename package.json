@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "DEBUG=* nodemon --exec 'node -r dotenv/config' server.js",
+    "lint": "eslint ./",
+    "lint-fix": "eslint --fix ./",
     "pngify": "svg2png ./avatar.svg -w 48",
     "heroku_db": "heroku pg:psql HEROKU_POSTGRESQL_BLUE_URL",
     "local_db": "PGUSER=postgres PGPASSWORD=root psql auth-server",
@@ -38,6 +40,8 @@
     "serve-static": "^1.9.1"
   },
   "devDependencies": {
+    "eslint": "^5.0.1",
+    "eslint-config-mr": "^1.0.0",
     "nodemon": "^1.9.1",
     "pre-commit": "^1.1.2"
   }

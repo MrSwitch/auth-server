@@ -1,7 +1,7 @@
 'use strict';
 // Access
 // Given a request, determine the users credentials.
-var crypt = require('./lib/crypt');
+const crypt = require('./lib/crypt');
 
 module.exports = (req, res, next) => {
 
@@ -10,7 +10,7 @@ module.exports = (req, res, next) => {
 	// Does the request query contain a valid access token?
 	if ('access_token' in req.query) {
 
-		let json = crypt.decrypt(req.query.access_token);
+		const json = crypt.decrypt(req.query.access_token);
 
 		delete req.query.access_token;
 
@@ -34,7 +34,7 @@ module.exports = (req, res, next) => {
 	res.json({
 		error: {
 			code: 'unauthorized',
-			message: message
+			message
 		}
 	});
 

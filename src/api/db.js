@@ -1,15 +1,15 @@
 'use strict';
 
-var debug = require('debug')('db');
-var pg = require('pg');
-var conn = process.env.HEROKU_POSTGRESQL_BLUE_URL || process.env.DATABASE_URL;
+const debug = require('debug')('db');
+const pg = require('pg');
+const conn = process.env.HEROKU_POSTGRESQL_BLUE_URL || process.env.DATABASE_URL;
 
 // Export the function DB
 module.exports = DB;
 
 pg.on('error', err => {
-	console.log('pg Connection errored');
-	console.log(err);
+	console.error('pg Connection errored');
+	console.error(err);
 });
 
 // Client
@@ -20,26 +20,26 @@ function connect() {
 	return new Promise((resolve, reject) => {
 
 		// Set the client
-		let agent = new pg.Client(conn);
+		const agent = new pg.Client(conn);
 		agent.connect(err => {
 
 			// Connected to DB?
 			if (err) {
-				debug('Failed to connected to POSTGRESQL ' + conn, err);
-				reject({message: 'Failed to connect to DB'});
+				debug(`Failed to connected to POSTGRESQL ${ conn}`, err);
+				reject(new Error('Failed to connect to DB'));
 				return;
 			}
 
 			// Connected
-			debug('Connected to POSTGRESQL ' + conn);
+			debug(`Connected to POSTGRESQL ${ conn}`);
 
 			// Resolve connection
 			resolve(agent);
 		});
 
 		agent.on('error', err => {
-			console.log('Connection errored');
-			console.log(err);
+			console.error('Connection errored');
+			console.error(err);
 			client = connect();
 		});
 	});
@@ -56,122 +56,134 @@ DB.use = function(table) {
 };
 
 // Run the query
-DB.query = function(sql, values) {
+DB.query = async function(sql, values) {
 
-	return client.then(agent => {
-		// Run the query
-		return new Promise((resolve, reject) => {
-			agent.query(sql, values, (err, resp) => {
+	const agent = await client;
 
-				if (err) {
-					debug(err.message);
-					reject({
-						message: err.message
-					});
-				}
-				else {
-					debug(resp);
-					resolve(resp);
-				}
-			});
+	// Run the query
+	return new Promise((resolve, reject) => {
+		agent.query(sql, values, (err, resp) => {
+
+			if (err) {
+				debug(err.message);
+				reject(err);
+			}
+			else {
+				debug(resp);
+				resolve(resp);
+			}
 		});
 	});
 
-}
+};
 
 // Get
-DB.get = function(fields, cond) {
-	return this.getAll(fields, cond, {limit: 1})
-	.then(data => {
-		if (data && data.rows && data.rows.length) {
-			return data.rows[0];
-		}
-		return null;
-	});
+DB.get = async function(fields, cond) {
+	const data = await this.getAll(fields, cond, {limit: 1});
+	if (data && data.rows && data.rows.length) {
+		return data.rows[0];
+	}
+	return null;
 };
 
 DB.getAll = function(fields, cond, options) {
 
 	let i = 1;
-	let where = [];
-	let values = [];
-	let opts = [];
+	const where = [];
+	const values = [];
+	const opts = [];
 
-	for (let x in cond) {
-		where.push(x + ' = $' + i++);
+	for (const x in cond) {
+		where.push(`${x } = $${ i++}`);
 		values.push(cond[x]);
 	}
 
-	for (let x in options) {
-		opts.push(x + ' ' + options[x]);
+	for (const x in options) {
+		opts.push(`${x } ${ options[x]}`);
 	}
 
-	return this.query('SELECT ' + fields.join(',') + ' FROM ' + this.table + (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ' + opts.join(' '), values);
+	return this.query(`SELECT ${ fields.join(',') } FROM ${ this.table }${where.length ? ` WHERE ${ where.join(' AND ')}` : '' } ${ opts.join(' ')}`, values);
 };
 
 // Insert
-DB.insert = function(data) {
+DB.insert = async function(data) {
 
-	var keys = [],
-		values = [],
-		temp = [],
-		i = 1;
+	const keys = [];
 
-	for (let x in data) {
+
+	const values = [];
+
+
+	const temp = [];
+
+
+	let i = 1;
+
+	for (const x in data) {
 		keys.push(x);
-		temp.push('$' + i++);
+		temp.push(`$${ i++}`);
 		values.push(data[x]);
 	}
-	return this.query('INSERT INTO ' + this.table + '(' + keys.join(',') + ') VALUES( ' + temp.join(',') + ' ) RETURNING *', values)
-	.then(formatResponse);
+	const resp = await this.query(`INSERT INTO ${ this.table }(${ keys.join(',') }) VALUES( ${ temp.join(',') } ) RETURNING *`, values);
+
+	return formatResponse(resp);
 };
 
-DB.update = function(data, cond) {
+DB.update = async function(data, cond) {
 
-	var set = [],
-		values = [],
-		where = [],
-		i = 1;
+	const set = [];
 
-	for (let x in data) {
-		var val = data[x];
+	const values = [];
+
+	const where = [];
+
+
+	let i = 1;
+
+	for (const x in data) {
+		let val = data[x];
 		if (val !== 'CURRENT_TIMESTAMP') {
 			values.push(val);
-			val = '$' + i++;
+			val = `$${ i++}`;
 		}
-		set.push(x + ' = ' + val);
+		set.push(`${x } = ${ val}`);
 	}
-	for (let x in cond) {
-		where.push(x + ' = $' + i++);
+	for (const x in cond) {
+		where.push(`${x } = $${ i++}`);
 		values.push(cond[x]);
 	}
-	return this.query('UPDATE ' + this.table + ' SET ' + set.join(',') + ' WHERE ' + where.join(' AND '), values)
-	.then(resp => {
-		if (resp.rowCount) {
-			resp.success = true;
-		}
-		else {
-			resp.error = true;
-			resp.details = 'Did not update any results';
-		}
-		return resp;
-	});
+
+	const resp = await this.query(`UPDATE ${ this.table } SET ${ set.join(',') } WHERE ${ where.join(' AND ')}`, values);
+
+	if (resp.rowCount) {
+		resp.success = true;
+	}
+	else {
+		resp.error = true;
+		resp.details = 'Did not update any results';
+	}
+	return resp;
 };
 
 
-DB.delete = function(cond) {
+DB.delete = async function(cond) {
 
-	var values = [],
-		where = [],
-		i = 1;
+	const values = [];
 
-	for (let x in cond) {
-		where.push(x + ' = $' + i++);
+
+	const where = [];
+
+
+	let i = 1;
+
+	for (const x in cond) {
+		where.push(`${x } = $${ i++}`);
 		values.push(cond[x]);
 	}
 
-	return this.query('DELETE FROM ' + this.table + ' WHERE ' + where.join(' AND '), values)
-	.then(formatResponse);
+	const resp = await this.query(`DELETE FROM ${ this.table } WHERE ${ where.join(' AND ')}`, values);
+
+	return formatResponse(resp);
 };
 
 function formatResponse(res) {
